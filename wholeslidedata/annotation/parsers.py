@@ -229,7 +229,7 @@ class AsapAnnotationParser(AnnotationParser):
         color = structure.attrib.get("Color")
         if re.match(r"^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$", color):
             return color
-        raise ValueError(f"Unsupported color format. Expected hex color code.")
+        raise ValueError(f"Unsupported color format {color}. Expected hex color code.")
 
     def _get_coordinates(self, annotation_structure):
         coordinates = []
