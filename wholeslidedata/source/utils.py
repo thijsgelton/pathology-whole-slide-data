@@ -94,8 +94,6 @@ def yaml_from_sources_factory(root_folder: str, class_folders: List[str], wsa_fi
             yaml_file[mode].append({"wsi": {"path": wsi}, "wsa": {"path": wsa}})
 
     with open(output_path, 'w') as outfile:
-        yaml = YAML()
-        yaml.indent(sequence=4, offset=2)
         yaml.dump(yaml_file, outfile)
 
 
