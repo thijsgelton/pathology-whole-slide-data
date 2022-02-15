@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Union
 
 import yaml
+import numpy as np
 from wholeslidedata.mode import WholeSlideMode
 from wholeslidedata.source.files import WholeSlideFile
 
