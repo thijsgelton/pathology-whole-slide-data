@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Union
+import numpy as np
 
 import yaml
 import numpy as np
@@ -73,15 +74,40 @@ def whole_slide_files_from_folder_factory(
     return all_sources
 
 
-def sources_from_yaml_factory(
-    yaml_source: Union[str, dict],
-    file_type: str,
-    mode: str = "default",
-    filters=[],
-    excludes=[],
-    **kwargs,
-):
+def yaml_from_sources_factory(root_folder: str, class_folders: List[str], wsa_filetype: str, wsi_filetype: str,
+                              output_path: str = "data.yml", excludes: List[str] = None, percentage: float = 0.3,
+                              train_split=1.0):
+    """
+    Creates a yaml file to be used in the user_config.yaml as yaml_source. Allows for easy testing by using only a
+    percentage of the original dataset.
+    """
+    folder = Path(root_folder)
+    yaml_file = {"training": [], "validation": []}
+    for class_folder in class_folders:
+        wsis = list(folder.rglob(f"{class_folder}/*." + wsi_filetype))
+        for i in range(int(len(wsis) * percentage)):
+            wsi = str(wsis[i])
+            wsa = str(wsi).strip(wsi_filetype) + f"{wsa_filetype}"
+            if any(ex in wsi for ex in excludes or []) or not os.path.isfile(wsa):
+                continue
 
+            mode = np.random.choice(["training", "validation"], p=[train_split, 1 - train_split])
+            yaml_file[mode].append({"wsi": {"path": wsi}, "wsa": {"path": wsa}})
+
+    with open(output_path, 'w') as outfile:
+        yaml = YAML()
+        yaml.indent(sequence=4, offset=2)
+        yaml.dump(yaml_file, outfile)
+
+
+def sources_from_yaml_factory(
+        yaml_source: Union[str, dict],
+        file_type: str,
+        mode: str = "default",
+        filters=[],
+        excludes=[],
+        **kwargs,
+):
     class_type = WholeSlideFile.get_registrant(file_type)
 
     data = {}
@@ -118,30 +144,13 @@ def factory_sources_from_csv():
 
 
 import os
-import shutil
 import yaml
 
 
-def copy(path, destination_folder):
-    out_path = os.path.join(destination_folder, os.path.basename(path))
-    exists = os.path.exists(out_path)
-    if exists:
-        pass
-    elif os.path.exists(path) and os.path.isdir(destination_folder):
-        print(f"copy from: {path}\ncopy to: {destination_folder}\n...")
-        shutil.copy2(path, destination_folder.rstrip("/"))
-    else:
-        raise ValueError(f"error copying source {path}, {destination_folder}")
-
-
-def copy_from_yml(yaml_path, output_path):
-    with open(yaml_path) as file:
-        content = yaml.full_load(file)
-
-    for mode, collection in content.items():
-        print(f"copying {mode} files...")
-        for item in collection:
-            for source_type, source in item.items():
-                print(f"copying {source_type}...")
-                print(source, source['path'])
-                copy(source['path'], output_path)
+def copy_from_yml(data_config, copy_path, modes=('training', 'validation'), file_types=('wsi', 'wsa')):
+    data = []
+    for mode in modes:
+        for file_type in file_types:
+            data.extend(sources_from_yaml_factory(data_config, file_type, mode=mode))
+    for d in data:
+        d.copy(copy_path)

@@ -50,11 +50,12 @@ class PatchLabelSampler(Sampler):
 
 @PatchLabelSampler.register(("mask",))
 class MaskPatchLabelSampler(PatchLabelSampler):
-    def __init__(self, image_backend, ratio, center, relative):
+    def __init__(self, image_backend, ratio, center, relative, spacing=0.5):
         self._image_backend = image_backend
         self._ratio = ratio
         self._center =center
         self._relative = relative
+        self._spacing = spacing
 
     # annotation should be coupled to image_annotation. how?
     def sample(
@@ -75,7 +76,7 @@ class MaskPatchLabelSampler(PatchLabelSampler):
                 int(y // self._ratio),
                 int(width // self._ratio),
                 int(height // self._ratio),
-                spacing=spacing,
+                spacing=self._spacing,
                 center=self._center,
                 relative=self._relative,
             )
@@ -212,15 +213,18 @@ class DetectionPatchLabelSampler(PatchLabelSampler):
                     continue
 
             if isinstance(annotation, Point):
-                objects[idx][:4] = self._get_point_coordinates(
+                box_coords = self._get_point_coordinates(
                     annotation, center_x, center_y, width, height, ratio
                 )
 
             if isinstance(annotation, Polygon):
-                objects[idx][:4] = self._get_polygon_coordinates(
+                box_coords = self._get_polygon_coordinates(
                     annotation, center_x, center_y, width, height, ratio
                 )
-
+            if box_coords is None:
+                continue
+                
+            objects[idx][:4] = box_coords
             objects[idx][4] = annotation.label.value
             objects[idx][5] = 1  # confidence
             idx += 1
@@ -241,7 +245,10 @@ class DetectionPatchLabelSampler(PatchLabelSampler):
         y1 = int(max(0, coordinates[1] - (size // 2)))
         x2 = int(min(width-1, coordinates[0] + (size // 2)))
         y2 = int(min(height-1, coordinates[1] + (size // 2)))
-
+        if x2 <= x1:
+            return None
+        if y2 <= y1:
+            return None
         return x1, y1, x2, y2
 
     def _get_polygon_coordinates(
@@ -254,6 +261,10 @@ class DetectionPatchLabelSampler(PatchLabelSampler):
         )
         x1 = int(max(0, coordinates[0][0]))
         y1 = int(max(0, coordinates[0][1]))
-        x2 = coordinates[1][0]
-        y2 = coordinates[1][1]
+        x2 = int(min(width-1, coordinates[1][0]))
+        y2 = int(min(height-1, coordinates[1][1]))
+        if x2 <= x1:
+            return None
+        if y2 <= y1:
+            return None
         return x1, y1, x2, y2

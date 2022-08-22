@@ -1,11 +1,14 @@
-from creationism.configuration.config import Configuration
-from creationism.utils import open_yaml
-from creationism.configuration.extensions import SEARCH_PATHS, open_config
-from wholeslidedata.configuration import config
-import pathlib
 import os
+import pathlib
+from pathlib import Path
+from typing import Dict, Union
 
-from wholeslidedata.source.files import WholeSlideAnnotationFile, WholeSlideImageFile
+from creationism.configuration.config import Configuration
+from creationism.configuration.extensions import SEARCH_PATHS, open_config
+from creationism.utils import open_yaml
+from wholeslidedata.configuration import config
+from wholeslidedata.source.files import (WholeSlideAnnotationFile,
+                                         WholeSlideImageFile)
 
 _DEFAULT_MODES = ("default",)
 
@@ -33,12 +36,12 @@ class SourceConfiguration(Configuration):
             search_paths=search_paths,
         )
 
-def get_paths(user_config, preset):
-    search_path = str(pathlib.Path(user_config).parent)
+def get_paths(user_config: Union[Path, Dict], mode='default', preset=None):
+    presets = (preset, ) if preset is not None else ()
     builds = SourceConfiguration.build(
-        user_config=user_config, modes=('default',), presets=(preset,), search_paths=(search_path, ),
+        user_config=user_config, modes=(mode,), presets=presets,
     )
-    for key, association in builds['source']['default']['associations'].items():
+    for key, association in builds['source'][mode]['associations'].items():
         image_file = association[WholeSlideImageFile][0]
         mask_file=  association[WholeSlideAnnotationFile][0]
         yield image_file.path, mask_file.path

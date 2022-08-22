@@ -29,7 +29,7 @@ class File(RegistrantFactory):
         self.mode = self.__class__.MODES.create(mode)
         self.path = Path(path)
         self.extension = self.__class__.EXTENSIONS.create(self.path.suffix)
-        self.orginal_path = copy(path)
+        self.original_path = copy(path)
 
     @abstractmethod
     def open(self):
@@ -68,7 +68,7 @@ class WholeSlideImageFile(WholeSlideFile, ImageFile):
     EXTENSIONS = WholeSlideImageExtension
 
     def __init__(
-        self, mode: Union[str, Mode], path: Union[str, Path], image_backend: str
+        self, mode: Union[str, Mode], path: Union[str, Path], image_backend: str = None
     ):
         super().__init__(mode, path, image_backend)
 
@@ -91,12 +91,12 @@ class WholeSlideAnnotationFile(WholeSlideFile, AnnotationFile):
 
     EXTENSIONS = WholeSlideAnnotationExtension
 
-    def __init__(self, mode: Union[Mode, str], path: str, annotation_parser: str):
+    def __init__(self, mode: Union[Mode, str], path: str, annotation_parser: str = None):
         super().__init__(mode, path, annotation_parser)
 
-    def open(self, labels=None, renamed_labels=None):
+    def open(self, labels=None):
         return WholeSlideAnnotation(
-            self.path, labels, renamed_labels, self._annotation_parser
+            self.path, labels=labels, parser=self._annotation_parser
         )
 
     def copy(self, destination_folder) -> None:
